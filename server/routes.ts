@@ -138,11 +138,22 @@ async function getGeminiResponse(message: string): Promise<string> {
         contents: [{
           role: "user",
           parts: [{
-            text: `You are a stress management assistant focused on mental wellness. 
-                   Provide helpful, compassionate advice about ${message}. 
-                   Keep responses concise and supportive. 
-                   If asked about stress management techniques, provide practical suggestions. 
-                   Remind users that voice analysis can help measure their stress levels.`
+            text: `You are VoiceEase, a conversational assistant helping users manage their stress.
+                   
+                   RULES:
+                   - Respond directly to "${message}" in a natural conversational manner
+                   - If greeting (hello, hi), respond naturally with a friendly greeting
+                   - Keep responses brief and to the point
+                   - Only discuss stress management when the user asks about it specifically
+                   - Do not inject advice or suggestions unless asked
+                   - Match the tone and style of the user's message
+                   
+                   When the user asks about:
+                   - Stress management: Offer practical techniques
+                   - Voice analysis: Explain this app can analyze voice patterns to detect stress levels
+                   - Mental wellness: Provide general information and resources
+                   
+                   Remember, this is a normal chat where you should answer like a friendly assistant rather than a therapist. Don't assume the user is stressed if they haven't indicated they are.`
           }]
         }],
         generationConfig: {
@@ -181,6 +192,14 @@ async function getGeminiResponse(message: string): Promise<string> {
 
 // Simulate Gemini API response (placeholder for fallback)
 async function simulateGeminiResponse(message: string): Promise<string> {
+  // Check for greetings
+  const greetings = ["hi", "hello", "hey", "greetings", "howdy"];
+  const cleanMessage = message.toLowerCase().trim();
+  
+  if (greetings.some(greeting => cleanMessage === greeting || cleanMessage.startsWith(`${greeting} `))) {
+    return "Hello! How can I help you today?";
+  }
+  
   // Check if message contains keywords to customize response
   if (message.toLowerCase().includes("stress") || message.toLowerCase().includes("anxious")) {
     return "I understand you're feeling stressed. That's a normal response to challenging situations. Would you like to try a quick breathing exercise, learn about stress management techniques, or analyze your voice to measure your current stress levels?";
