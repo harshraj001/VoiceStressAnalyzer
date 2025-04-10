@@ -5,7 +5,7 @@ export function MobileNav() {
   const [location] = useLocation();
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 z-10 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-lg">
       <div className="flex justify-around py-2">
         <Link href="/">
           <a className={`flex flex-col items-center py-2 px-3 ${

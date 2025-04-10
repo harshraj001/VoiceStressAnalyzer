@@ -1,6 +1,14 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import dotenv from "dotenv";
+
+// Load environment variables from .env file
+dotenv.config();
+
+// Log the API key status (without revealing the actual keys)
+console.log("GEMINI_API_KEY status:", process.env.GEMINI_API_KEY ? "Provided ✓" : "Missing ✗");
+console.log("ASSEMBLYAI_API_KEY status:", process.env.ASSEMBLYAI_API_KEY ? "Provided ✓" : "Missing ✗");
 
 const app = express();
 app.use(express.json());

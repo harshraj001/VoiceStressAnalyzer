@@ -11,6 +11,8 @@ export interface ChatMessage {
   content: string;
   isUserMessage: boolean;
   timestamp: Date;
+  isTyping?: boolean;
+  typingText?: string;
 }
 
 export interface StressAnalysisResult {

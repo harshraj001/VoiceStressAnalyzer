@@ -115,14 +115,14 @@ export function StressHistory() {
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-4">
         {/* History Chart */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 mb-6">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">
             Stress Level Trends
           </h3>
           
-          <div className="aspect-video bg-gray-50 dark:bg-gray-900 rounded-lg">
+          <div className="bg-gray-50 dark:bg-gray-900 rounded-lg">
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
@@ -182,7 +182,7 @@ export function StressHistory() {
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center">
+              <div className="flex items-center justify-center">
                 <p className="text-gray-500 dark:text-gray-400">
                   No stress history data available
                 </p>

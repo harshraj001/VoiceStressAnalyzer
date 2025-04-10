@@ -61,8 +61,8 @@ export const analyzeVoice = async (audioBlob: Blob): Promise<StressAnalysisResul
     return mapApiResponseToResult(analysisResult);
   } catch (error) {
     console.error("Error analyzing voice:", error);
-    // Return mock data if server analysis fails
-    return generateFallbackResult();
+    // Instead of returning fake data, throw the error to be handled by the UI
+    throw new Error("Failed to analyze voice. Please try again later.");
   }
 };
 
@@ -127,26 +127,4 @@ function getScoreLabel(score: number, type: string): string {
   return "Neutral";
 }
 
-// Generate fallback analysis result if API call fails
-function generateFallbackResult(): StressAnalysisResult {
-  return {
-    id: nanoid(),
-    stressLevel: 65,
-    stressCategory: StressLevel.MEDIUM,
-    voiceToneScore: 65,
-    voiceToneLabel: "Slightly Tense",
-    speechPaceScore: 75,
-    speechPaceLabel: "Accelerated",
-    voiceTremorScore: 35,
-    voiceTremorLabel: "Minimal",
-    sentimentScore: 65,
-    sentimentLabel: "Moderately Negative",
-    transcript: "",
-    timestamp: new Date(),
-    recommendations: [
-      "Try the 4-7-8 breathing technique: inhale for 4 seconds, hold for 7, exhale for 8",
-      "Consider taking a short break to reset your mind",
-      "Listen to calming sounds or music to reduce tension"
-    ]
-  };
-}
+// No fallback method - we now show actual errors to users

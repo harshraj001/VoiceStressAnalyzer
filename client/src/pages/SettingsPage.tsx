@@ -4,8 +4,8 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/components/ui/theme-provider';
-import { clearAllStoredData } from '@/lib/stressStorage';
-import { Moon, Sun, Monitor, Save, Trash, BellRing, VolumeX, Volume2 } from 'lucide-react';
+import { clearAllStoredData, getStressHistory, getChatMessages } from '@/lib/stressStorage';
+import { Moon, Sun, Monitor, Save, Trash, Download } from 'lucide-react';
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
@@ -16,6 +16,50 @@ export default function SettingsPage() {
     if (window.confirm('Are you sure you want to clear all your data? This action cannot be undone.')) {
       clearAllStoredData();
       alert('All data has been cleared successfully.');
+    }
+  };
+  
+  const handleExportData = () => {
+    try {
+      // Gather data from storage
+      const stressHistory = getStressHistory();
+      const chatMessages = getChatMessages();
+      
+      // Create a complete data object with metadata
+      const exportData = {
+        metadata: {
+          appName: 'VoiceEase',
+          exportDate: new Date().toISOString(),
+          version: '1.0.0'
+        },
+        stressAnalyses: stressHistory,
+        conversations: chatMessages
+      };
+      
+      // Convert to JSON string
+      const jsonString = JSON.stringify(exportData, null, 2);
+      
+      // Create a Blob with the JSON data
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      
+      // Create a download URL
+      const url = URL.createObjectURL(blob);
+      
+      // Create a temporary link element to trigger the download
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `voiceease-data-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      
+      // Trigger the download
+      link.click();
+      
+      // Clean up
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error exporting data:', error);
+      alert('Failed to export data. Please try again.');
     }
   };
 
@@ -34,7 +78,7 @@ export default function SettingsPage() {
             
             <div className="space-y-6">
               {/* Appearance Section */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm">
                 <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                     Appearance
@@ -79,57 +123,6 @@ export default function SettingsPage() {
                 </div>
               </div>
               
-              {/* Notifications Section */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
-                <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Notifications
-                  </h3>
-                </div>
-                
-                <div className="p-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <BellRing className="h-5 w-5 text-gray-700 dark:text-gray-300" />
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Enable notifications
-                      </span>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        className="sr-only peer"
-                        checked={notificationsEnabled}
-                        onChange={() => setNotificationsEnabled(!notificationsEnabled)}
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
-                    </label>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      {soundEnabled ? (
-                        <Volume2 className="h-5 w-5 text-gray-700 dark:text-gray-300" />
-                      ) : (
-                        <VolumeX className="h-5 w-5 text-gray-700 dark:text-gray-300" />
-                      )}
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Sound effects
-                      </span>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        className="sr-only peer"
-                        checked={soundEnabled}
-                        onChange={() => setSoundEnabled(!soundEnabled)}
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
-                    </label>
-                  </div>
-                </div>
-              </div>
-              
               {/* Data Management Section */}
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
                 <div className="p-6 border-b border-gray-200 dark:border-gray-700">
@@ -147,8 +140,9 @@ export default function SettingsPage() {
                     <Button 
                       variant="outline" 
                       className="flex items-center space-x-2"
+                      onClick={handleExportData}
                     >
-                      <Save className="h-4 w-4" />
+                      <Download className="h-4 w-4" />
                       <span>Export Data</span>
                     </Button>
                     

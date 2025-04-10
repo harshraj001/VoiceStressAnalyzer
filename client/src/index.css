@@ -8,6 +8,60 @@
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    @apply font-sans antialiased bg-background text-foreground overflow-x-hidden;
+  }
+  
+  /* Remove scrollbars but maintain functionality */
+  ::-webkit-scrollbar {
+    width: 0px;
+    height: 0px;
+    background: transparent;
+  }
+}
+
+@layer components {
+  /* Typing animation styling */
+  .typing-dot {
+    @apply inline-block w-2 h-2 bg-primary rounded-full mx-0.5;
+  }
+  
+  .typing-dot:nth-child(1) {
+    animation: bounce 1s infinite 0s;
+  }
+  
+  .typing-dot:nth-child(2) {
+    animation: bounce 1s infinite 0.2s;
+  }
+  
+  .typing-dot:nth-child(3) {
+    animation: bounce 1s infinite 0.4s;
+  }
+  
+  @keyframes bounce {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-5px);
+    }
+  }
+  
+  .typing-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background-color: #6366f1;
+    margin-left: 2px;
+    animation: blink 1s step-end infinite;
+  }
+  
+  @keyframes blink {
+    from, to { opacity: 1; }
+    50% { opacity: 0; }
+  }
+  
+  .typing-effect {
+    white-space: pre-wrap;
+    overflow: hidden;
   }
 }

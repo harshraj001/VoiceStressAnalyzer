@@ -6,10 +6,20 @@ import multer from "multer";
 import { z } from "zod";
 import fetch from "node-fetch";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { AssemblyAI } from "assemblyai";
+import dotenv from "dotenv";
+import fs from "fs";
+import { Readable } from "stream";
+import path from "path";
 
 // API keys from environment variables
-const ASSEMBLYAI_API_KEY = process.env.ASSEMBLYAI_API_KEY;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const ASSEMBLYAI_API_KEY = process.env.ASSEMBLYAI_API_KEY || "00afdabf2cab4f54b595a8bc5f46ab22";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "AIzaSyDVI0OUffZc1u0rxUzJM4l-_ebjjdUCuY4";
+
+// Log keys for debugging (safely - only showing if they exist, not the actual keys)
+console.log("GEMINI_API_KEY available:", GEMINI_API_KEY ? "Yes" : "No");
+console.log("GEMINI_API_KEY length:", GEMINI_API_KEY?.length || 0);
+console.log("ASSEMBLYAI_API_KEY available:", ASSEMBLYAI_API_KEY ? "Yes" : "No");
 
 // Create uploads storage
 const upload = multer({ 
@@ -32,21 +42,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Message is required' });
       }
 
+      console.log(`Received chat request with message: "${message}"`);
+      console.log(`GEMINI_API_KEY available: ${Boolean(GEMINI_API_KEY)}`);
+      
       // Use Gemini API with provided API key
       if (GEMINI_API_KEY) {
         try {
+          console.log("Attempting to use Gemini API...");
           const response = await getGeminiResponse(message);
-          return res.json({ response });
+          console.log("Successfully received response from Gemini API");
+          return res.json({ response, source: "gemini" });
         } catch (apiError) {
           console.error("Error calling Gemini API:", apiError);
           // Fall back to simulated response if API call fails
+          console.log("Falling back to simulated response due to API error");
           const fallbackResponse = await simulateGeminiResponse(message);
-          return res.json({ response: fallbackResponse });
+          return res.json({ response: fallbackResponse, source: "fallback" });
         }
       } else {
         // Fallback if no API key is provided
+        console.log("No Gemini API key provided, using fallback response");
         const fallbackResponse = await simulateGeminiResponse(message);
-        return res.json({ response: fallbackResponse });
+        return res.json({ response: fallbackResponse, source: "fallback" });
       }
     } catch (error) {
       console.error("Error in chat API:", error);
@@ -121,6 +138,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   return httpServer;
 }
 
+// Utility function to create a promise with timeout
+function promiseWithTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMsg: string): Promise<T> {
+  const timeout = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error(errorMsg)), timeoutMs);
+  });
+  return Promise.race([promise, timeout]);
+}
+
 // Real Gemini API implementation using the official GoogleGenerativeAI library
 async function getGeminiResponse(message: string): Promise<string> {
   if (!GEMINI_API_KEY) {
@@ -128,47 +153,98 @@ async function getGeminiResponse(message: string): Promise<string> {
   }
 
   try {
-    // Initialize the Gemini API
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    console.log(`Initializing Gemini AI with API key: ${GEMINI_API_KEY.substring(0, 4)}...`);
     
-    // For Gemini-1.0-pro model
-    const model = genAI.getGenerativeModel({
-      model: "gemini-pro",
+    // Initialize the Gemini API with custom fetch options if needed
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY, {
+      timeout: 10000, // 10 seconds timeout
     });
     
-    // Configure the chat session with appropriate system message and parameters
-    const chatSession = model.startChat({
-      generationConfig: {
-        temperature: 0.2,
-        topP: 0.8,
-        topK: 40,
-        maxOutputTokens: 150,
-      },
-      history: [
-        {
-          role: "user",
-          parts: [{ text: "You are VoiceEase, a conversational assistant helping users manage their stress. Reply in a conversational manner." }],
+    // Try to use gemini-1.0-pro if 1.5-flash fails (providing fallback options)
+    console.log("Creating generative model instance...");
+    let modelName = "gemini-1.5-flash";
+    try {
+      // First try with the preferred model
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+      });
+      
+      // Configure the chat session with improved system message and parameters
+      console.log(`Starting chat session with ${modelName} model...`);
+      const chatSession = model.startChat({
+        generationConfig: {
+          temperature: 0.7, // Increased for more varied responses
+          topP: 0.95,
+          topK: 40,
+          maxOutputTokens: 500, // Increased to allow for more detailed responses
         },
-        {
-          role: "model",
-          parts: [{ text: "I'll act as VoiceEase and help with stress management in a conversational way. How can I assist you today?" }],
-        },
-        {
-          role: "user", 
-          parts: [{ text: "When responding to greetings like 'hi' or 'hello', just respond with a simple friendly greeting. Don't mention anything about stress or offer assistance unless directly asked." }],
-        },
-        {
-          role: "model",
-          parts: [{ text: "Understood! I'll keep my greeting responses simple and friendly." }],
-        },
-      ],
-    });
-    
-    // Send the user's message
-    const result = await chatSession.sendMessage(message);
-    const response = result.response.text();
-    
-    return response;
+        history: [
+          {
+            role: "user",
+            parts: [{ text: "You are VoiceEase, a specialized conversational assistant focused on stress management and mental well-being. Your purpose is to help users understand their stress levels and provide personalized coping strategies. You should be empathetic, supportive, and provide evidence-based advice for managing stress, anxiety, and improving overall mental wellness. When responding to users, maintain a warm, calm tone while being concise and practical." }],
+          },
+          {
+            role: "model",
+            parts: [{ text: "I understand my role as VoiceEase. I'll focus on helping users with stress management and mental well-being through empathetic, evidence-based support. I'll maintain a warm, calm tone while providing practical advice tailored to each user's needs." }],
+          },
+          {
+            role: "user", 
+            parts: [{ text: "For simple greetings like 'hi' or 'hello', respond casually without immediately mentioning stress or assistance. For all other interactions, focus on stress management, mental wellness techniques, relaxation strategies, and coping mechanisms. Base your responses on established psychological approaches like cognitive behavioral techniques, mindfulness practices, and scientifically-backed relaxation methods." }],
+          },
+          {
+            role: "model",
+            parts: [{ text: "Got it. I'll keep greetings casual and friendly. For stress-related topics, I'll provide evidence-based advice drawing from cognitive behavioral techniques, mindfulness practices, and proven relaxation methods, all while maintaining a supportive and practical approach." }],
+          },
+        ],
+      });
+      
+      // Send the user's message with timeout protection
+      console.log("Sending message to Gemini API:", message);
+      const result = await promiseWithTimeout(
+        chatSession.sendMessage(message), 
+        15000, // 15 seconds timeout
+        "Gemini API request timed out"
+      );
+      
+      const response = result.response.text();
+      console.log("Gemini API response:", response);
+      return response;
+      
+    } catch (modelError) {
+      // If the first model fails, try with a fallback model
+      console.error(`Error with ${modelName} model:`, modelError);
+      
+      if (modelName === "gemini-1.5-flash") {
+        console.log("Trying with fallback model gemini-pro...");
+        modelName = "gemini-pro";
+        
+        const fallbackModel = genAI.getGenerativeModel({
+          model: modelName,
+        });
+        
+        // Configure a simpler chat session with the fallback model
+        const fallbackChatSession = fallbackModel.startChat({
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 500,
+          },
+        });
+        
+        console.log("Sending message to fallback Gemini model:", message);
+        const fallbackResult = await promiseWithTimeout(
+          fallbackChatSession.sendMessage(message),
+          10000, // 10 seconds timeout for fallback
+          "Fallback Gemini API request timed out"
+        );
+        
+        const fallbackResponse = fallbackResult.response.text();
+        console.log("Fallback Gemini API response:", fallbackResponse);
+        return fallbackResponse;
+      } else {
+        // Both models failed, re-throw the error
+        throw modelError;
+      }
+    }
   } catch (error) {
     console.error("Error calling Gemini API:", error);
     throw error;
@@ -202,137 +278,156 @@ async function simulateGeminiResponse(message: string): Promise<string> {
   return "I'm here to help you manage stress and improve your well-being. You can ask me about stress management techniques, try a voice stress analysis, or discuss specific concerns you have about your mental well-being. How can I assist you today?";
 }
 
-// Real voice analysis with AssemblyAI
+// Real voice analysis with AssemblyAI using the official SDK
 async function analyzeVoiceWithAssemblyAI(audioBuffer: Buffer): Promise<any> {
   if (!ASSEMBLYAI_API_KEY) {
     throw new Error("AssemblyAI API key is not provided");
   }
 
   try {
-    // Step 1: Upload the audio file to AssemblyAI
-    const uploadResponse = await fetch("https://api.assemblyai.com/v2/upload", {
-      method: "POST",
-      headers: {
-        "Authorization": ASSEMBLYAI_API_KEY,
-        "Content-Type": "application/octet-stream"
-      },
-      body: audioBuffer
+    console.log("Starting AssemblyAI voice analysis process...");
+    console.log(`Audio buffer size: ${audioBuffer.length} bytes`);
+    
+    // Create a temporary file to store the audio buffer
+    const tempDir = path.join(process.cwd(), 'temp');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir);
+    }
+    
+    const tempFilePath = path.join(tempDir, `recording-${Date.now()}.wav`);
+    fs.writeFileSync(tempFilePath, audioBuffer);
+    console.log(`Saved audio to temporary file: ${tempFilePath}`);
+    
+    // Initialize the AssemblyAI client with the API key
+    console.log("Initializing AssemblyAI client...");
+    const client = new AssemblyAI({
+      apiKey: ASSEMBLYAI_API_KEY,
     });
-
-    if (!uploadResponse.ok) {
-      throw new Error(`AssemblyAI upload error: ${uploadResponse.status} ${uploadResponse.statusText}`);
+    
+    // Configure the transcription parameters
+    const params = {
+      audio: tempFilePath,
+      sentiment_analysis: true,
+      content_safety: true,
+      auto_highlights: true,
+      speaker_labels: true,
+      entity_detection: true,
+    };
+    
+    // Submit the transcription job and wait for completion
+    console.log("Submitting transcription job...");
+    const transcript = await client.transcripts.transcribe(params);
+    console.log(`Transcription completed! Transcript ID: ${transcript.id}`);
+    
+    // Clean up the temporary file
+    try {
+      fs.unlinkSync(tempFilePath);
+      console.log(`Deleted temporary file: ${tempFilePath}`);
+    } catch (err) {
+      console.warn(`Failed to delete temporary file: ${tempFilePath}`, err);
     }
-
-    const uploadData = await uploadResponse.json() as { upload_url: string };
-    const audioUrl = uploadData.upload_url;
-
-    // Step 2: Transcribe the audio with sentiment analysis
-    const transcriptResponse = await fetch("https://api.assemblyai.com/v2/transcript", {
-      method: "POST",
-      headers: {
-        "Authorization": ASSEMBLYAI_API_KEY,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        audio_url: audioUrl,
-        sentiment_analysis: true,
-        content_safety: true,
-        auto_highlights: true,
-        speaker_labels: true,
-        entity_detection: true,
-        speech_threshold: 0.2,
-      })
-    });
-
-    if (!transcriptResponse.ok) {
-      throw new Error(`AssemblyAI transcription error: ${transcriptResponse.status} ${transcriptResponse.statusText}`);
-    }
-
-    const transcriptData = await transcriptResponse.json() as { id: string };
-    const transcriptId = transcriptData.id;
-
-    // Step 3: Poll for transcription results
-    let transcript: any = null;
-    for (let i = 0; i < 30; i++) { // Retry up to 30 times (30 seconds)
-      const pollingResponse = await fetch(`https://api.assemblyai.com/v2/transcript/${transcriptId}`, {
-        method: "GET",
-        headers: {
-          "Authorization": ASSEMBLYAI_API_KEY
-        }
-      });
-
-      if (!pollingResponse.ok) {
-        throw new Error(`AssemblyAI polling error: ${pollingResponse.status} ${pollingResponse.statusText}`);
-      }
-
-      transcript = await pollingResponse.json() as { status: string; text: string; sentiment_analysis_results: any[] };
-
-      if (transcript.status === "completed") {
-        break;
-      } else if (transcript.status === "error") {
-        throw new Error("AssemblyAI transcription failed");
-      }
-
-      // Wait 1 second before next poll
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-
-    if (!transcript || transcript.status !== "completed") {
-      throw new Error("Transcription timed out or failed");
-    }
-
-    // Step 4: Analyze the transcript for stress indicators
-    const text = transcript.text;
+    
+    // Extract the transcript text
+    const text = transcript.text || "";
+    console.log("Transcript text:", text);
+    
+    // Process sentiment analysis results
     const sentimentResults = transcript.sentiment_analysis_results || [];
-
+    console.log(`Found ${sentimentResults.length} sentiment analysis segments`);
+    
     // Calculate sentiment score (average sentiment score from 0-100)
     let sentimentScore = 50; // Neutral default
     if (sentimentResults.length > 0) {
       // Convert sentiment to a score: positive=100, neutral=50, negative=0
-      const sentimentValues = sentimentResults.map((result: { sentiment: string }) => {
+      const sentimentValues = sentimentResults.map((result: any) => {
         if (result.sentiment === "POSITIVE") return 100;
         if (result.sentiment === "NEGATIVE") return 0;
         return 50; // NEUTRAL
       });
       sentimentScore = Math.round(sentimentValues.reduce((sum: number, val: number) => sum + val, 0) / sentimentValues.length);
+      console.log(`Calculated sentiment score: ${sentimentScore}/100`);
+    } else {
+      console.log("No sentiment results found, using default score of 50");
     }
 
     // Analyze speech pace (word count per minute)
     // For simplicity, we'll calculate this based on word count and duration
     const wordCount = text.split(/\s+/).length;
-    const durationMs = transcript.audio_duration || 30000; // Default to 30 seconds if missing
-    const durationMinutes = durationMs / 60000;
+    console.log(`Word count in transcript: ${wordCount} words`);
+    
+    // Get audio duration from the transcript
+    // Audio duration is in milliseconds, we'll convert to seconds and minutes
+    const audioLengthMs = transcript.audio_duration || 0;
+    console.log(`Raw audio duration from API: ${audioLengthMs}ms`);
+    
+    // If duration is suspiciously short or missing, estimate based on word count
+    // Average speaking rate is ~150 words per minute, so 1 word ≈ 0.4 seconds
+    const estimatedDurationMs = wordCount * 400; // 400ms per word is a reasonable estimate
+    const durationMs = (!audioLengthMs || audioLengthMs < 1000) ? estimatedDurationMs : audioLengthMs;
+    
+    console.log(`Adjusted audio duration: ${durationMs}ms (${durationMs/1000} seconds)`);
+    
+    // Ensure we have at least 1 second to prevent division by very small numbers
+    const durationMinutes = Math.max(durationMs, 1000) / 60000;
     const wordsPerMinute = wordCount / durationMinutes;
+    console.log(`Speech pace: ${Math.round(wordsPerMinute)} words per minute`);
     
     // Convert words per minute to a score (0-100)
     // Average speaking rate is 120-150 WPM, higher values might indicate stress
     let speechPaceScore = 50;
-    if (wordsPerMinute > 180) speechPaceScore = 90; // Very fast
-    else if (wordsPerMinute > 150) speechPaceScore = 75; // Fast
-    else if (wordsPerMinute < 100) speechPaceScore = 30; // Slow
+    
+    // Sanity check for the WPM - cap it at reasonable values
+    const capWordsPerMinute = Math.min(wordsPerMinute, 300); // Cap at 300 WPM (very fast speech)
+    
+    if (capWordsPerMinute > 180) {
+        speechPaceScore = 90; // Very fast
+        console.log("Speech pace is very fast (>180 WPM), indicating potential stress");
+    } else if (capWordsPerMinute > 150) {
+        speechPaceScore = 75; // Fast
+        console.log("Speech pace is fast (150-180 WPM), may indicate mild stress");
+    } else if (capWordsPerMinute < 100) {
+        speechPaceScore = 30; // Slow
+        console.log("Speech pace is slow (<100 WPM), generally indicates calm state");
+    } else {
+        console.log("Speech pace is average (100-150 WPM)");
+    }
+    console.log(`Speech pace score: ${speechPaceScore}/100`);
     
     // For voice tone and tremor, we would need audio analysis not provided by AssemblyAI
-    // We'll estimate these based on other factors and add some randomness
+    // We'll estimate these based on other factors and add some controlled randomness
+    console.log("Estimating voice tone and tremor scores based on sentiment and other factors...");
     
     // Voice tone score (estimated)
-    // Uses sentiment as a base and adds randomness
+    // Negative sentiment often indicates tense voice tone
+    // We use an inverse relationship with sentiment score
+    const sentimentFactor = 100 - sentimentScore;
+    const paceContribution = speechPaceScore > 70 ? 20 : 0; // Fast speech often indicates tense tone
+    const randomVariation = Math.floor(Math.random() * 10) - 5; // Small random factor (-5 to +5)
+    
     const voiceToneScore = Math.min(100, Math.max(0, 
-      Math.round(100 - sentimentScore * 0.7) + Math.floor(Math.random() * 20) - 10
+      Math.round((sentimentFactor * 0.7) + paceContribution + randomVariation)
     ));
+    console.log(`Estimated voice tone score: ${voiceToneScore}/100 (higher = more tense)`);
     
     // Voice tremor (estimated)
-    // More negative sentiment often correlates with more tremor
+    // Higher sentiment negativity and faster speech correlate with tremor
+    const tremorBase = sentimentScore < 30 ? 70 : (sentimentScore < 60 ? 50 : 30);
+    const paceFactor = speechPaceScore > 70 ? 15 : 0;
+    const tremorRandomVariation = Math.floor(Math.random() * 10) - 5;
+    
     const voiceTremorScore = Math.min(100, Math.max(0,
-      Math.round(100 - sentimentScore * 0.6) + Math.floor(Math.random() * 20) - 10
+      Math.round(tremorBase + paceFactor + tremorRandomVariation)
     ));
+    console.log(`Estimated voice tremor score: ${voiceTremorScore}/100 (higher = more tremor)`);
 
     // Calculate overall stress level (1-100)
     const stressLevel = Math.min(100, Math.max(1, Math.floor(
       (voiceToneScore * 0.3) + 
       (speechPaceScore * 0.25) + 
       (voiceTremorScore * 0.2) + 
-      (sentimentScore * 0.25)
+      ((100 - sentimentScore) * 0.25) // Invert sentiment score for stress contribution
     )));
+    console.log(`Calculated overall stress level: ${stressLevel}/100`);
 
     // Generate stress labels based on scores
     const getScoreLabel = (score: number, type: string): string => {

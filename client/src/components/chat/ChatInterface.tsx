@@ -67,6 +67,19 @@ export function ChatInterface({ onToggleMobileMenu }: ChatInterfaceProps) {
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
 
+    // Create a temporary typing message
+    const typingMessageId = nanoid();
+    const typingMessage: ChatMessage = {
+      id: typingMessageId,
+      content: "",
+      isUserMessage: false,
+      timestamp: new Date(),
+      isTyping: true,
+    };
+
+    // Show typing indicator
+    setMessages((prev) => [...prev, typingMessage]);
+
     try {
       // Call Gemini API through our backend
       const response = await apiRequest("POST", "/api/chat", {
@@ -74,28 +87,66 @@ export function ChatInterface({ onToggleMobileMenu }: ChatInterfaceProps) {
       });
       
       const data = await response.json();
+      const responseText = data.response || "I'm having trouble processing your request right now. Could you try again?";
       
-      const botMessage: ChatMessage = {
-        id: nanoid(),
-        content: data.response || "I'm having trouble processing your request right now. Could you try again?",
-        isUserMessage: false,
-        timestamp: new Date(),
-      };
-
-      setMessages((prev) => [...prev, botMessage]);
+      // Simulate typing with gradual text reveal
+      await typeMessage(typingMessageId, responseText);
     } catch (error) {
       console.error("Error sending message to chatbot:", error);
       
       // Fallback response if API fails
-      const fallbackMessage: ChatMessage = {
-        id: nanoid(),
-        content: "I'm having trouble connecting to my services right now. Please try again in a moment.",
-        isUserMessage: false,
-        timestamp: new Date(),
-      };
+      const fallbackText = "I'm having trouble connecting to my services right now. Please try again in a moment.";
       
-      setMessages((prev) => [...prev, fallbackMessage]);
+      // Simulate typing with the fallback message
+      await typeMessage(typingMessageId, fallbackText);
     }
+  };
+
+  // Function to simulate typing animation character by character
+  const typeMessage = async (messageId: string, finalText: string) => {
+    // Show typing indicator (bouncing dots) for a moment before starting to type
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Typing speed - adjust for faster or slower typing
+    const typingSpeed = 30; // milliseconds per character
+    
+    // Change from typing indicator to character-by-character typing
+    setMessages(prev => 
+      prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, isTyping: false, typingText: "", content: finalText }
+          : msg
+      )
+    );
+    
+    // Type character by character
+    let currentText = "";
+    for (let i = 0; i < finalText.length; i++) {
+      currentText += finalText.charAt(i);
+      
+      // Update the typing text for the message
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === messageId 
+            ? { ...msg, typingText: currentText }
+            : msg
+        )
+      );
+      
+      // Random typing speed variation to make it more natural
+      const randomDelay = Math.floor(Math.random() * 30) + typingSpeed;
+      await new Promise(resolve => setTimeout(resolve, randomDelay));
+    }
+    
+    // After finishing typing, remove typingText and set the content
+    await new Promise(resolve => setTimeout(resolve, 100));
+    setMessages(prev => 
+      prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, typingText: undefined, content: finalText }
+          : msg
+      )
+    );
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -209,70 +260,95 @@ export function ChatInterface({ onToggleMobileMenu }: ChatInterfaceProps) {
                 </div>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden rounded-full bg-gray-100 dark:bg-gray-700"
-              onClick={onToggleMobileMenu}
-            >
-              <Menu className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  // Clear chat messages except for the welcome message
+                  const welcomeMessage: ChatMessage = {
+                    id: nanoid(),
+                    content: "Hello! I'm your VoiceEase stress assistant. I can help you manage stress, offer relaxation techniques, or analyze your voice to gauge your stress levels. How are you feeling today?",
+                    isUserMessage: false,
+                    timestamp: new Date(),
+                  };
+                  setMessages([welcomeMessage]);
+                  saveChatMessages([welcomeMessage]);
+                }}
+                className="flex items-center"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5">
+                  <path d="M12 5v14M5 12h14"></path>
+                </svg>
+                <span className="hidden sm:inline">New Chat</span>
+                <span className="sm:hidden">New</span>
+              </Button>
+            </div>
           </div>
         </div>
 
         {/* Chat Messages */}
-        <div className="flex-1 p-4 overflow-y-auto" id="chat-messages">
+        <div 
+          className="flex-1 p-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600" 
+          id="chat-messages"
+          style={{ paddingBottom: '70px' }}
+        >
           {messages.map((message) => (
             <ChatMessageComponent key={message.id} message={message} />
           ))}
-          <div ref={messagesEndRef} />
+          <div ref={messagesEndRef} className="h-4" />
         </div>
 
         {/* Chat Input with Voice Analysis Button */}
-        <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm p-4">
+        <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm p-4 pt-3 sticky bottom-0 pb-24 md:pb-4">
           {/* Voice Analysis Module */}
-          <div className="mb-4 bg-gradient-to-r from-primary-100/70 to-secondary-100/70 dark:from-primary-900/30 dark:to-secondary-900/30 p-4 rounded-xl border border-primary-200 dark:border-primary-800">
-            <div className="flex flex-col sm:flex-row items-center justify-between">
-              <div className="mb-3 sm:mb-0">
+          <div className="mb-4 bg-gradient-to-r from-primary-100/70 to-secondary-100/70 dark:from-primary-900/30 dark:to-secondary-900/30 p-3 sm:p-4 rounded-xl border border-primary-200 dark:border-primary-800 shadow-sm">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="mb-2 sm:mb-0 text-center sm:text-left">
                 <h3 className="font-medium text-primary-700 dark:text-primary-300">
                   Voice Stress Analysis
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                   Speak naturally for 15-30 seconds
                 </p>
               </div>
 
               {/* Voice Recording Button */}
               <Button
-                variant="record"
+                variant={isRecording ? "destructive" : "default"}
+                size="sm"
+                className="min-w-[160px] transition-all duration-200"
                 onClick={isRecording ? handleStopRecording : handleStartRecording}
               >
-                <span className="relative flex items-center justify-center w-6 h-6">
+                <span className="relative flex items-center justify-center w-5 h-5 mr-1.5">
                   {isRecording && (
-                    <span className="absolute w-6 h-6 bg-red-500/20 rounded-full animate-ping"></span>
+                    <span className="absolute w-5 h-5 bg-red-500/30 rounded-full animate-ping"></span>
                   )}
-                  <Mic className="h-5 w-5" />
+                  <Mic className={`h-4 w-4 ${isRecording ? "text-white" : ""}`} />
                 </span>
-                <span>{isRecording ? "Stop Recording" : "Analyze My Stress"}</span>
+                <span className="text-sm">{isRecording ? "Stop Recording" : "Analyze My Stress"}</span>
               </Button>
             </div>
           </div>
-
+          
           {/* Text Input */}
-          <div className="relative bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center">
+          <div className="relative bg-gray-100 dark:bg-gray-700 rounded-xl flex items-center shadow-sm w-full overflow-hidden">
             <input
               type="text"
               placeholder="Type your message..."
-              className="flex-1 bg-transparent border-0 focus:ring-0 focus:outline-none px-4 py-3 text-gray-800 dark:text-white"
+              className="flex-1 bg-transparent border-0 focus:ring-0 focus:outline-none px-4 py-3 text-gray-800 dark:text-white min-h-[44px] w-full"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
+              disabled={isRecording}
+              style={{ WebkitAppearance: 'none' }}
             />
             <Button
               variant="ghost"
               size="icon"
               onClick={handleSendMessage}
-              className="mr-2 text-primary hover:text-primary dark:text-primary dark:hover:text-primary"
+              disabled={!input.trim()}
+              className={`mr-2 ${input.trim() ? "text-primary hover:text-primary-600 dark:text-primary dark:hover:text-primary-400" : "text-gray-400 dark:text-gray-600 cursor-not-allowed"}`}
             >
               <Send className="h-5 w-5" />
             </Button>
