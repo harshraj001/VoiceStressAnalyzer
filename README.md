@@ -121,7 +121,7 @@ VoiceStressAnalyzer/
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/VoiceStressAnalyzer.git
+   git clone https://github.com/harshraj001/VoiceStressAnalyzer.git
    cd VoiceStressAnalyzer
    ```
 
@@ -232,6 +232,11 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 3. Commit your changes (`git commit -m 'Add some amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+## 📤 Repository
+
+This project is hosted on GitHub:
+https://github.com/harshraj001/VoiceStressAnalyzer
 
 ## 📄 License
 
