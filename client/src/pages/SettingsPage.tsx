@@ -21,7 +21,7 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header username="John Doe" />
+      <Header />
 
       <main className="flex-1 relative z-0 flex flex-col md:flex-row">
         <Sidebar />
@@ -159,43 +159,6 @@ export default function SettingsPage() {
                     >
                       <Trash className="h-4 w-4" />
                       <span>Clear All Data</span>
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Account Section */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
-                <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Account
-                  </h3>
-                </div>
-                
-                <div className="p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center">
-                      <span className="text-primary-600 text-lg font-semibold">JD</span>
-                    </div>
-                    <div>
-                      <h4 className="text-base font-medium text-gray-900 dark:text-white">
-                        John Doe
-                      </h4>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        john.doe@example.com
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-6 flex flex-wrap gap-3">
-                    <Button variant="outline">
-                      Edit Profile
-                    </Button>
-                    <Button variant="outline">
-                      Change Password
-                    </Button>
-                    <Button variant="destructive">
-                      Sign Out
                     </Button>
                   </div>
                 </div>

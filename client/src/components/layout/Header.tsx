@@ -2,24 +2,11 @@ import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/ui/theme-provider";
 import { Moon, Sun, Mic } from "lucide-react";
 
-interface HeaderProps {
-  username?: string;
-}
-
-export function Header({ username = "Guest" }: HeaderProps) {
+export function Header() {
   const { theme, setTheme } = useTheme();
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
-  };
-
-  // Generate initials from username
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase();
   };
 
   return (
@@ -35,7 +22,7 @@ export function Header({ username = "Guest" }: HeaderProps) {
             </h1>
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center">
             <Button
               variant="ghost"
               size="icon"
@@ -49,20 +36,6 @@ export function Header({ username = "Guest" }: HeaderProps) {
                 <Moon className="h-5 w-5 text-gray-600" />
               )}
             </Button>
-
-            <div className="hidden md:block">
-              <Button
-                variant="outline"
-                className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-700 rounded-full py-1 px-3 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-              >
-                <span className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
-                  <span className="text-primary-600 text-sm font-semibold">
-                    {getInitials(username)}
-                  </span>
-                </span>
-                <span className="text-sm font-medium">{username}</span>
-              </Button>
-            </div>
           </div>
         </div>
       </div>

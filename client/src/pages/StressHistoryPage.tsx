@@ -6,7 +6,7 @@ import { StressHistory } from '@/components/stress/StressHistory';
 export default function StressHistoryPage() {
   return (
     <div className="min-h-screen flex flex-col">
-      <Header username="John Doe" />
+      <Header />
 
       <main className="flex-1 relative z-0 flex flex-col md:flex-row">
         <Sidebar />

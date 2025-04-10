@@ -18,6 +18,8 @@ export function StressHistory() {
   const [timeRange, setTimeRange] = useState<TimeRange>("week");
   const [chartData, setChartData] = useState<any[]>([]);
   const [historyEntries, setHistoryEntries] = useState<StressHistoryEntry[]>([]);
+  const [selectedEntry, setSelectedEntry] = useState<StressAnalysisResult | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   useEffect(() => {
     const history = getStressHistory();
@@ -41,6 +43,11 @@ export function StressHistory() {
       prepareChartData(history, timeRange);
     }
   }, [timeRange]);
+  
+  const handleViewDetails = (entry: StressAnalysisResult) => {
+    setSelectedEntry(entry);
+    setShowDetailsModal(true);
+  };
 
   // Format key factors from analysis
   const getKeyFactors = (analysis: StressAnalysisResult): string => {
@@ -262,6 +269,7 @@ export function StressHistory() {
                       <Button 
                         variant="link"
                         className="text-primary dark:text-primary hover:text-primary-700 dark:hover:text-primary-300"
+                        onClick={() => handleViewDetails(entry)}
                       >
                         View Details
                       </Button>
