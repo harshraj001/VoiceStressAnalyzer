@@ -1,0 +1,83 @@
+Project Prompt: VoiceEase – Voice Stress Analysis Chatbot Web App
+
+Overview:
+Build VoiceEase, a sleek, responsive web application that functions as a voice stress analysis chatbot centered on stress, stress management, and mental well-being. The app should allow users to interact with a Gemini-powered chatbot and analyze their emotional stress levels through voice input, while also tracking stress history visually.
+
+🔧 Core Features & Functionality
+1. Conversational Chatbot (Gemini-powered):
+Integrate Gemini to provide structured, empathetic responses related to:
+
+Stress and its effects
+
+Mental wellness tips
+
+Relaxation strategies
+
+Self-care routines and coping mechanisms
+
+Keep the scope strictly within mental health and wellness topics.
+
+2. Voice-Based Stress Detection:
+Add a "Analyze My Stress" button for voice input.
+
+Use AssemblyAI to transcribe and analyze text sentiment.
+
+Additionally, analyze raw voice features on the server side using libraries like:
+
+librosa
+
+parselmouth (Praat)
+
+pyAudioAnalysis
+
+Combine textual sentiment and voice acoustics to compute a stress level (e.g., Low, Medium, High).
+
+Display immediate feedback after analysis in a visually appealing way.
+
+3. Stress History & Visualization:
+Store stress results locally on the client using localStorage or IndexedDB.
+
+Visualize stress levels over time with:
+
+A line/bar graph (e.g., using Chart.js or Recharts)
+
+A timeline or calendar view of past entries
+
+Show trends and allow users to reflect on progress.
+
+🎨 UI/UX Requirements
+Modern, responsive interface (desktop and mobile optimized)
+
+Dark and light themes with a toggle option
+
+Use glossy UI design (glassmorphism, soft shadows, rounded corners)
+
+Smooth transitions and feedback animations
+
+Interface Sections:
+
+Chatbot window
+
+Voice stress analysis panel
+
+History dashboard with graphs/timeline
+
+🧠 Optional Enhancements:
+Local user profiles with persistent stress history
+
+Personalized daily wellness tips based on stress trend
+
+Offer calm-down audio or breathing exercises after high-stress detection
+
+🛠️ Tech Stack Recommendations:
+Frontend: React / Next.js + TailwindCSS (with shadcn/ui or daisyUI)
+
+Backend: Python (Flask or FastAPI) or Node.js
+
+Voice Analysis: librosa, pyAudioAnalysis, praat-parselmouth
+
+Transcription/Sentiment: AssemblyAI API
+
+Charts: Recharts / Chart.js
+
+Storage: localStorage / IndexedDB for offline stress history
