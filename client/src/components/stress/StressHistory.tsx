@@ -262,7 +262,7 @@ export function StressHistory() {
                               ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300" 
                               : "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300"
                         }`}>
-                          {entry.stressCategory} ({entry.stressLevel}%)
+                          {entry.stressLevel} <span className="opacity-70">({entry.stressCategory})</span>
                         </span>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
