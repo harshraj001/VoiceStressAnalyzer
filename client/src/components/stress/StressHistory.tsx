@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { StressAnalysisResult, TimeRange, StressHistoryEntry } from "@/types";
 import { getStressHistory } from "@/lib/stressStorage";
 import { format } from "date-fns";
+import { StressAnalysisModal } from "./StressAnalysisModal";
+import { X } from "lucide-react";
 
 export function StressHistory() {
   const [timeRange, setTimeRange] = useState<TimeRange>("week");
@@ -112,179 +114,190 @@ export function StressHistory() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* History Chart */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 mb-6">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-          Stress Level Trends
-        </h3>
+    <>
+      <div className="space-y-6">
+        {/* History Chart */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 mb-6">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+            Stress Level Trends
+          </h3>
+          
+          <div className="aspect-video bg-gray-50 dark:bg-gray-900 rounded-lg">
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
+                  <XAxis 
+                    dataKey="date" 
+                    stroke="#6B7280"
+                    fontSize={12}
+                    tickLine={false}
+                  />
+                  <YAxis 
+                    stroke="#6B7280"
+                    fontSize={12}
+                    tickLine={false}
+                    domain={[0, 100]}
+                    tickFormatter={(value) => `${value}%`}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                      borderRadius: '0.5rem',
+                      border: '1px solid #E5E7EB'
+                    }}
+                    formatter={(value) => [`${value}%`]}
+                  />
+                  <Legend />
+                  <Line 
+                    type="monotone" 
+                    dataKey="stressLevel" 
+                    name="Stress Level"
+                    stroke="#6366f1" 
+                    strokeWidth={3}
+                    dot={{ r: 4 }}
+                    activeDot={{ r: 6 }}
+                    isAnimationActive={true}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="voiceTone" 
+                    name="Voice Tone"
+                    stroke="#8b5cf6" 
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                    activeDot={{ r: 5 }}
+                    isAnimationActive={true}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="sentiment" 
+                    name="Sentiment"
+                    stroke="#ec4899" 
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                    activeDot={{ r: 5 }}
+                    isAnimationActive={true}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center">
+                <p className="text-gray-500 dark:text-gray-400">
+                  No stress history data available
+                </p>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex justify-end mt-4">
+            <div className="inline-flex rounded-md shadow-sm">
+              <Button
+                type="button"
+                onClick={() => handleTimeRangeChange("week")}
+                variant={timeRange === "week" ? "default" : "outline"}
+                className="rounded-l-lg rounded-r-none"
+                size="sm"
+              >
+                Week
+              </Button>
+              <Button
+                type="button"
+                onClick={() => handleTimeRangeChange("month")}
+                variant={timeRange === "month" ? "default" : "outline"}
+                className="rounded-none"
+                size="sm"
+              >
+                Month
+              </Button>
+              <Button
+                type="button"
+                onClick={() => handleTimeRangeChange("year")}
+                variant={timeRange === "year" ? "default" : "outline"}
+                className="rounded-r-lg rounded-l-none"
+                size="sm"
+              >
+                Year
+              </Button>
+            </div>
+          </div>
+        </div>
         
-        <div className="aspect-video bg-gray-50 dark:bg-gray-900 rounded-lg">
-          {chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.1} />
-                <XAxis 
-                  dataKey="date" 
-                  stroke="#6B7280"
-                  fontSize={12}
-                  tickLine={false}
-                />
-                <YAxis 
-                  stroke="#6B7280"
-                  fontSize={12}
-                  tickLine={false}
-                  domain={[0, 100]}
-                  tickFormatter={(value) => `${value}%`}
-                />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                    borderRadius: '0.5rem',
-                    border: '1px solid #E5E7EB'
-                  }}
-                  formatter={(value) => [`${value}%`]}
-                />
-                <Legend />
-                <Line 
-                  type="monotone" 
-                  dataKey="stressLevel" 
-                  name="Stress Level"
-                  stroke="#6366f1" 
-                  strokeWidth={3}
-                  dot={{ r: 4 }}
-                  activeDot={{ r: 6 }}
-                  isAnimationActive={true}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="voiceTone" 
-                  name="Voice Tone"
-                  stroke="#8b5cf6" 
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
-                  isAnimationActive={true}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="sentiment" 
-                  name="Sentiment"
-                  stroke="#ec4899" 
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
-                  isAnimationActive={true}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+        {/* Recent Entries Table */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+            Recent Entries
+          </h3>
+          
+          {historyEntries.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead>
+                  <tr>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Date & Time
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Stress Level
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Key Factors
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {historyEntries.map((entry) => (
+                    <tr key={entry.id}>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                        {entry.date}, {entry.time}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          entry.stressLevel < 40 
+                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" 
+                            : entry.stressLevel > 70 
+                              ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300" 
+                              : "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300"
+                        }`}>
+                          {entry.stressCategory} ({entry.stressLevel}%)
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {entry.keyFactors}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-right text-sm">
+                        <Button 
+                          variant="link"
+                          className="text-primary dark:text-primary hover:text-primary-700 dark:hover:text-primary-300"
+                          onClick={() => handleViewDetails(entry)}
+                        >
+                          View Details
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : (
-            <div className="h-full flex items-center justify-center">
-              <p className="text-gray-500 dark:text-gray-400">
-                No stress history data available
-              </p>
+            <div className="py-6 text-center text-gray-500 dark:text-gray-400">
+              <p>No stress analysis entries yet. Try analyzing your voice in the chat.</p>
             </div>
           )}
         </div>
-        
-        <div className="flex justify-end mt-4">
-          <div className="inline-flex rounded-md shadow-sm">
-            <Button
-              type="button"
-              onClick={() => handleTimeRangeChange("week")}
-              variant={timeRange === "week" ? "default" : "outline"}
-              className="rounded-l-lg rounded-r-none"
-              size="sm"
-            >
-              Week
-            </Button>
-            <Button
-              type="button"
-              onClick={() => handleTimeRangeChange("month")}
-              variant={timeRange === "month" ? "default" : "outline"}
-              className="rounded-none"
-              size="sm"
-            >
-              Month
-            </Button>
-            <Button
-              type="button"
-              onClick={() => handleTimeRangeChange("year")}
-              variant={timeRange === "year" ? "default" : "outline"}
-              className="rounded-r-lg rounded-l-none"
-              size="sm"
-            >
-              Year
-            </Button>
-          </div>
-        </div>
       </div>
       
-      {/* Recent Entries Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-          Recent Entries
-        </h3>
-        
-        {historyEntries.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead>
-                <tr>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Date & Time
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Stress Level
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Key Factors
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {historyEntries.map((entry) => (
-                  <tr key={entry.id}>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
-                      {entry.date}, {entry.time}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        entry.stressLevel < 40 
-                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" 
-                          : entry.stressLevel > 70 
-                            ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300" 
-                            : "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300"
-                      }`}>
-                        {entry.stressCategory} ({entry.stressLevel}%)
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {entry.keyFactors}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-right text-sm">
-                      <Button 
-                        variant="link"
-                        className="text-primary dark:text-primary hover:text-primary-700 dark:hover:text-primary-300"
-                        onClick={() => handleViewDetails(entry)}
-                      >
-                        View Details
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="py-6 text-center text-gray-500 dark:text-gray-400">
-            <p>No stress analysis entries yet. Try analyzing your voice in the chat.</p>
-          </div>
-        )}
-      </div>
-    </div>
+      {/* Stress Analysis Modal */}
+      {selectedEntry && showDetailsModal && (
+        <StressAnalysisModal
+          result={selectedEntry}
+          open={true}
+          onClose={() => setShowDetailsModal(false)}
+        />
+      )}
+    </>
   );
 }
