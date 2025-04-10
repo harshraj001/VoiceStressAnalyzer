@@ -126,7 +126,8 @@ async function getGeminiResponse(message: string): Promise<string> {
     throw new Error("Gemini API key is not provided");
   }
 
-  const apiUrl = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent";
+  // API URL for Gemini-1.0-pro model
+  const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
   
   try {
     const response = await fetch(`${apiUrl}?key=${GEMINI_API_KEY}`, {
@@ -135,32 +136,40 @@ async function getGeminiResponse(message: string): Promise<string> {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        contents: [{
-          role: "user",
-          parts: [{
-            text: `You are VoiceEase, a conversational assistant helping users manage their stress.
-                   
-                   RULES:
-                   - Respond directly to "${message}" in a natural conversational manner
-                   - If greeting (hello, hi), respond naturally with a friendly greeting
-                   - Keep responses brief and to the point
-                   - Only discuss stress management when the user asks about it specifically
-                   - Do not inject advice or suggestions unless asked
-                   - Match the tone and style of the user's message
-                   
-                   When the user asks about:
-                   - Stress management: Offer practical techniques
-                   - Voice analysis: Explain this app can analyze voice patterns to detect stress levels
-                   - Mental wellness: Provide general information and resources
-                   
-                   Remember, this is a normal chat where you should answer like a friendly assistant rather than a therapist. Don't assume the user is stressed if they haven't indicated they are.`
-          }]
-        }],
+        contents: [
+          {
+            role: "system",
+            parts: [{
+              text: `You are VoiceEase, a conversational assistant helping users manage their stress.
+                     
+                     RULES:
+                     - Respond directly to user messages in a natural conversational manner
+                     - If user sends a greeting (hello, hi), respond with a simple friendly greeting
+                     - Keep responses brief and to the point (1-3 sentences maximum)
+                     - Only discuss stress management when the user asks about it specifically
+                     - Do not inject advice or suggestions unless asked directly
+                     - Never prefix your responses with "As VoiceEase" or similar phrases
+                     
+                     When the user asks about:
+                     - Stress management: Offer practical techniques
+                     - Voice analysis: Explain this app can analyze voice patterns to detect stress levels
+                     - Mental wellness: Provide general information and resources
+                     
+                     This is a normal chat where you act as a friendly assistant rather than a therapist.`
+            }]
+          },
+          {
+            role: "user",
+            parts: [{
+              text: message
+            }]
+          }
+        ],
         generationConfig: {
-          temperature: 0.7,
+          temperature: 0.2,
           topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 1000,
+          topP: 0.8,
+          maxOutputTokens: 150,
         }
       })
     });
