@@ -5,6 +5,7 @@ import { insertStressAnalysisSchema, insertChatMessageSchema } from "@shared/sch
 import multer from "multer";
 import { z } from "zod";
 import fetch from "node-fetch";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // API keys from environment variables
 const ASSEMBLYAI_API_KEY = process.env.ASSEMBLYAI_API_KEY;
@@ -120,79 +121,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
   return httpServer;
 }
 
-// Real Gemini API implementation
+// Real Gemini API implementation using the official GoogleGenerativeAI library
 async function getGeminiResponse(message: string): Promise<string> {
   if (!GEMINI_API_KEY) {
     throw new Error("Gemini API key is not provided");
   }
 
-  // API URL for Gemini-1.0-pro model
-  const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
-  
   try {
-    const response = await fetch(`${apiUrl}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: "system",
-            parts: [{
-              text: `You are VoiceEase, a conversational assistant helping users manage their stress.
-                     
-                     RULES:
-                     - Respond directly to user messages in a natural conversational manner
-                     - If user sends a greeting (hello, hi), respond with a simple friendly greeting
-                     - Keep responses brief and to the point (1-3 sentences maximum)
-                     - Only discuss stress management when the user asks about it specifically
-                     - Do not inject advice or suggestions unless asked directly
-                     - Never prefix your responses with "As VoiceEase" or similar phrases
-                     
-                     When the user asks about:
-                     - Stress management: Offer practical techniques
-                     - Voice analysis: Explain this app can analyze voice patterns to detect stress levels
-                     - Mental wellness: Provide general information and resources
-                     
-                     This is a normal chat where you act as a friendly assistant rather than a therapist.`
-            }]
-          },
-          {
-            role: "user",
-            parts: [{
-              text: message
-            }]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.2,
-          topK: 40,
-          topP: 0.8,
-          maxOutputTokens: 150,
-        }
-      })
-    });
-
-    const data = await response.json() as {
-      error?: { message: string };
-      candidates?: Array<{
-        content?: {
-          parts?: Array<{ text?: string }>
-        }
-      }>;
-    };
+    // Initialize the Gemini API
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     
-    if (data.error) {
-      console.error("Gemini API error:", data.error);
-      throw new Error(data.error.message || "Error calling Gemini API");
-    }
-
-    if (data.candidates && data.candidates[0]?.content?.parts && data.candidates[0].content.parts[0]?.text) {
-      return data.candidates[0].content.parts[0].text;
-    } else {
-      throw new Error("Unexpected response format from Gemini API");
-    }
+    // For Gemini-1.0-pro model
+    const model = genAI.getGenerativeModel({
+      model: "gemini-pro",
+    });
+    
+    // Configure the chat session with appropriate system message and parameters
+    const chatSession = model.startChat({
+      generationConfig: {
+        temperature: 0.2,
+        topP: 0.8,
+        topK: 40,
+        maxOutputTokens: 150,
+      },
+      history: [
+        {
+          role: "user",
+          parts: [{ text: "You are VoiceEase, a conversational assistant helping users manage their stress. Reply in a conversational manner." }],
+        },
+        {
+          role: "model",
+          parts: [{ text: "I'll act as VoiceEase and help with stress management in a conversational way. How can I assist you today?" }],
+        },
+        {
+          role: "user", 
+          parts: [{ text: "When responding to greetings like 'hi' or 'hello', just respond with a simple friendly greeting. Don't mention anything about stress or offer assistance unless directly asked." }],
+        },
+        {
+          role: "model",
+          parts: [{ text: "Understood! I'll keep my greeting responses simple and friendly." }],
+        },
+      ],
+    });
+    
+    // Send the user's message
+    const result = await chatSession.sendMessage(message);
+    const response = result.response.text();
+    
+    return response;
   } catch (error) {
     console.error("Error calling Gemini API:", error);
     throw error;
