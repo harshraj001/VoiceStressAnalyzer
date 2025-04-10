@@ -37,8 +37,9 @@ export function StressLevelIndicator({
           />
         </div>
         {showLabel && (
-          <span className={`text-sm ${textColor} font-medium`}>
-            {stressCategory}
+          <span className={`text-sm ${textColor} font-medium flex items-center gap-1`}>
+            <span>{level}</span>
+            <span className="text-xs opacity-70">({stressCategory})</span>
           </span>
         )}
       </div>

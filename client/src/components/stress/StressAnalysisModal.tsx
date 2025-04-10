@@ -67,7 +67,8 @@ export function StressAnalysisModal({
                     ? "text-red-500" 
                     : "text-amber-500"
               }`}>
-                {result.stressCategory}
+                <span>{result.stressLevel}</span>
+                <span className="text-sm ml-1 opacity-70">({result.stressCategory})</span>
               </h4>
             </div>
             

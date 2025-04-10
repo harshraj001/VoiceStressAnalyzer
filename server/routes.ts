@@ -126,7 +126,7 @@ async function getGeminiResponse(message: string): Promise<string> {
     throw new Error("Gemini API key is not provided");
   }
 
-  const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+  const apiUrl = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent";
   
   try {
     const response = await fetch(`${apiUrl}?key=${GEMINI_API_KEY}`, {
@@ -136,6 +136,7 @@ async function getGeminiResponse(message: string): Promise<string> {
       },
       body: JSON.stringify({
         contents: [{
+          role: "user",
           parts: [{
             text: `You are a stress management assistant focused on mental wellness. 
                    Provide helpful, compassionate advice about ${message}. 
@@ -284,12 +285,12 @@ async function analyzeVoiceWithAssemblyAI(audioBuffer: Buffer): Promise<any> {
     let sentimentScore = 50; // Neutral default
     if (sentimentResults.length > 0) {
       // Convert sentiment to a score: positive=100, neutral=50, negative=0
-      const sentimentValues = sentimentResults.map(result => {
+      const sentimentValues = sentimentResults.map((result: { sentiment: string }) => {
         if (result.sentiment === "POSITIVE") return 100;
         if (result.sentiment === "NEGATIVE") return 0;
         return 50; // NEUTRAL
       });
-      sentimentScore = Math.round(sentimentValues.reduce((sum, val) => sum + val, 0) / sentimentValues.length);
+      sentimentScore = Math.round(sentimentValues.reduce((sum: number, val: number) => sum + val, 0) / sentimentValues.length);
     }
 
     // Analyze speech pace (word count per minute)
