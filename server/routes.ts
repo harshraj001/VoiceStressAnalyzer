@@ -12,14 +12,8 @@ import fs from "fs";
 import { Readable } from "stream";
 import path from "path";
 
-// API keys from environment variables
-const ASSEMBLYAI_API_KEY = process.env.ASSEMBLYAI_API_KEY || "00afdabf2cab4f54b595a8bc5f46ab22";
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "AIzaSyDVI0OUffZc1u0rxUzJM4l-_ebjjdUCuY4";
-
-// Log keys for debugging (safely - only showing if they exist, not the actual keys)
-console.log("GEMINI_API_KEY available:", GEMINI_API_KEY ? "Yes" : "No");
-console.log("GEMINI_API_KEY length:", GEMINI_API_KEY?.length || 0);
-console.log("ASSEMBLYAI_API_KEY available:", ASSEMBLYAI_API_KEY ? "Yes" : "No");
+// Load environment variables from .env file
+dotenv.config();
 
 // Create uploads storage
 const upload = multer({ 
@@ -43,10 +37,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log(`Received chat request with message: "${message}"`);
-      console.log(`GEMINI_API_KEY available: ${Boolean(GEMINI_API_KEY)}`);
+      console.log(`GEMINI_API_KEY available: ${Boolean(process.env.GEMINI_API_KEY)}`);
       
       // Use Gemini API with provided API key
-      if (GEMINI_API_KEY) {
+      if (process.env.GEMINI_API_KEY) {
         try {
           console.log("Attempting to use Gemini API...");
           const response = await getGeminiResponse(message);
@@ -70,7 +64,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ error: "Failed to process chat request" });
     }
   });
-
+  
   // POST /api/analyze-voice - Analyze voice recording
   app.post("/api/analyze-voice", upload.single('audio'), async (req, res) => {
     try {
@@ -82,7 +76,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get the audio file buffer
       const audioBuffer = req.file.buffer;
       
-      if (ASSEMBLYAI_API_KEY) {
+      if (process.env.ASSEMBLYAI_API_KEY) {
         try {
           // Use real AssemblyAI analysis
           const analysisResult = await analyzeVoiceWithAssemblyAI(audioBuffer);
@@ -148,17 +142,16 @@ function promiseWithTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMsg:
 
 // Real Gemini API implementation using the official GoogleGenerativeAI library
 async function getGeminiResponse(message: string): Promise<string> {
-  if (!GEMINI_API_KEY) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
     throw new Error("Gemini API key is not provided");
   }
 
   try {
-    console.log(`Initializing Gemini AI with API key: ${GEMINI_API_KEY.substring(0, 4)}...`);
+    console.log(`Initializing Gemini AI with API key: ${apiKey.substring(0, 4)}...`);
     
-    // Initialize the Gemini API with custom fetch options if needed
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY, {
-      timeout: 10000, // 10 seconds timeout
-    });
+    // Initialize the Gemini API
+    const genAI = new GoogleGenerativeAI(apiKey);
     
     // Try to use gemini-1.0-pro if 1.5-flash fails (providing fallback options)
     console.log("Creating generative model instance...");
@@ -181,7 +174,7 @@ async function getGeminiResponse(message: string): Promise<string> {
         history: [
           {
             role: "user",
-            parts: [{ text: "You are VoiceEase, a specialized conversational assistant focused on stress management and mental well-being. Your purpose is to help users understand their stress levels and provide personalized coping strategies. You should be empathetic, supportive, and provide evidence-based advice for managing stress, anxiety, and improving overall mental wellness. When responding to users, maintain a warm, calm tone while being concise and practical." }],
+            parts: [{ text: "You are VoiceEase, a specialized conversational assistant focused EXCLUSIVELY on stress management and mental well-being. Your purpose is to help users understand their stress levels and provide personalized coping strategies. You should be empathetic, supportive, and provide evidence-based advice for managing stress, anxiety, and improving overall mental wellness. When responding to users, maintain a warm, calm tone while being concise and practical." }],
           },
           {
             role: "model",
@@ -189,11 +182,11 @@ async function getGeminiResponse(message: string): Promise<string> {
           },
           {
             role: "user", 
-            parts: [{ text: "For simple greetings like 'hi' or 'hello', respond casually without immediately mentioning stress or assistance. For all other interactions, focus on stress management, mental wellness techniques, relaxation strategies, and coping mechanisms. Base your responses on established psychological approaches like cognitive behavioral techniques, mindfulness practices, and scientifically-backed relaxation methods." }],
+            parts: [{ text: "For simple greetings like 'hi' or 'hello', respond casually without immediately mentioning stress or assistance. For all other interactions, focus ONLY on stress management, mental wellness techniques, relaxation strategies, and coping mechanisms. Base your responses on established psychological approaches like cognitive behavioral techniques, mindfulness practices, and scientifically-backed relaxation methods. If a user asks about topics unrelated to mental wellness, stress management, or general well-being, politely redirect them by saying you're specifically designed to help with stress management and mental well-being topics." }],
           },
           {
             role: "model",
-            parts: [{ text: "Got it. I'll keep greetings casual and friendly. For stress-related topics, I'll provide evidence-based advice drawing from cognitive behavioral techniques, mindfulness practices, and proven relaxation methods, all while maintaining a supportive and practical approach." }],
+            parts: [{ text: "Got it. I'll keep greetings casual and friendly. For stress-related topics, I'll provide evidence-based advice drawing from cognitive behavioral techniques, mindfulness practices, and proven relaxation methods, all while maintaining a supportive and practical approach. If users ask about unrelated topics, I'll gently remind them that I'm specialized in stress management and mental well-being, and redirect the conversation accordingly." }],
           },
         ],
       });
@@ -280,7 +273,8 @@ async function simulateGeminiResponse(message: string): Promise<string> {
 
 // Real voice analysis with AssemblyAI using the official SDK
 async function analyzeVoiceWithAssemblyAI(audioBuffer: Buffer): Promise<any> {
-  if (!ASSEMBLYAI_API_KEY) {
+  const apiKey = process.env.ASSEMBLYAI_API_KEY;
+  if (!apiKey) {
     throw new Error("AssemblyAI API key is not provided");
   }
 
@@ -301,7 +295,7 @@ async function analyzeVoiceWithAssemblyAI(audioBuffer: Buffer): Promise<any> {
     // Initialize the AssemblyAI client with the API key
     console.log("Initializing AssemblyAI client...");
     const client = new AssemblyAI({
-      apiKey: ASSEMBLYAI_API_KEY,
+      apiKey: apiKey,
     });
     
     // Configure the transcription parameters

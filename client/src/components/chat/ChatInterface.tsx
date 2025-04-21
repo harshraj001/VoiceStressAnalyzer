@@ -43,7 +43,12 @@ export function ChatInterface({ onToggleMobileMenu }: ChatInterfaceProps) {
 
   // Auto-scroll to bottom of chat when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Disable auto-scrolling during typing to prevent stuttering
+    if (!messages.some(m => m.typingText !== undefined)) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    }
   }, [messages]);
 
   // Save messages to localStorage whenever they change
@@ -133,6 +138,11 @@ export function ChatInterface({ onToggleMobileMenu }: ChatInterfaceProps) {
         )
       );
       
+      // Force scroll to bottom after each character update
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+      }, 0);
+      
       // Random typing speed variation to make it more natural
       const randomDelay = Math.floor(Math.random() * 30) + typingSpeed;
       await new Promise(resolve => setTimeout(resolve, randomDelay));
@@ -147,6 +157,11 @@ export function ChatInterface({ onToggleMobileMenu }: ChatInterfaceProps) {
           : msg
       )
     );
+    
+    // Final scroll to bottom
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
