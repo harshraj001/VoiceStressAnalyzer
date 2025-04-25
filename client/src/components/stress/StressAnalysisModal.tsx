@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StressAnalysisResult } from "@/types";
 import { StressLevelIndicator } from "./StressLevelIndicator";
+import { BreathingExercise } from "./BreathingExercise";
 
 interface StressAnalysisModalProps {
   result: StressAnalysisResult;
@@ -14,6 +16,8 @@ export function StressAnalysisModal({
   open, 
   onClose 
 }: StressAnalysisModalProps) {
+  const [showBreathingExercise, setShowBreathingExercise] = useState(false);
+  
   if (!open) return null;
 
   // Get badge color based on level
@@ -153,11 +157,20 @@ export function StressAnalysisModal({
           <Button variant="outline" onClick={onClose}>
             Close
           </Button>
-          <Button variant="default">
+          <Button 
+            variant="default"
+            onClick={() => setShowBreathingExercise(true)}
+          >
             Try Breathing Exercise
           </Button>
         </div>
       </div>
+      
+      {/* Breathing Exercise Modal */}
+      <BreathingExercise
+        open={showBreathingExercise}
+        onOpenChange={setShowBreathingExercise}
+      />
     </div>
   );
 }

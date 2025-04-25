@@ -1,6 +1,7 @@
 import { useLocation, Link } from "wouter";
-import { BarChart3, MessageSquare, BookOpen, Settings } from "lucide-react";
+import { BarChart3, MessageSquare, BookOpen, Settings, Wind } from "lucide-react";
 import { StressLevelIndicator } from "@/components/stress/StressLevelIndicator";
+import { BreathingExercise } from "@/components/stress/BreathingExercise";
 import { Button } from "@/components/ui/button";
 import { getStressHistory } from "@/lib/stressStorage";
 import { useEffect, useState } from "react";
@@ -9,6 +10,7 @@ import { StressAnalysisResult } from "@/types";
 export function Sidebar() {
   const [location] = useLocation();
   const [latestAnalysis, setLatestAnalysis] = useState<StressAnalysisResult | null>(null);
+  const [showBreathingExercise, setShowBreathingExercise] = useState(false);
 
   useEffect(() => {
     const history = getStressHistory();
@@ -36,6 +38,16 @@ export function Sidebar() {
             <span className="font-medium">Chat</span>
           </a>
         </Link>
+        
+        {/* Breathing Exercise Button */}
+        <a
+          className="flex items-center space-x-3 px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg cursor-pointer"
+          onClick={() => setShowBreathingExercise(true)}
+        >
+          <Wind className="h-5 w-5 text-blue-500 dark:text-blue-400" />
+          <span className="font-medium">Breathing Exercise</span>
+        </a>
+        
         <Link href="/history">
           <a
             className={`flex items-center space-x-3 px-3 py-2 ${
@@ -121,6 +133,12 @@ export function Sidebar() {
           )}
         </div>
       </div>
+      
+      {/* Breathing Exercise Modal */}
+      <BreathingExercise
+        open={showBreathingExercise}
+        onOpenChange={setShowBreathingExercise}
+      />
     </aside>
   );
 }

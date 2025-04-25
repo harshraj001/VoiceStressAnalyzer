@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from "react";
-import { Bot, Menu, Send, Mic } from "lucide-react";
+import { Bot, Menu, Send, Mic, Wind } from "lucide-react";
 import { nanoid } from "nanoid";
 import { ChatMessage as ChatMessageComponent } from "./ChatMessage";
 import { Button } from "@/components/ui/button";
 import { StressAnalysisModal } from "@/components/stress/StressAnalysisModal";
+import { BreathingExercise } from "@/components/stress/BreathingExercise";
 import { ChatMessage, StressAnalysisResult } from "@/types";
 import { startRecording, stopRecording, analyzeVoice } from "@/lib/voiceAnalysis";
 import { getChatMessages, saveChatMessages, saveStressAnalysis } from "@/lib/stressStorage";
@@ -20,6 +21,7 @@ export function ChatInterface({ onToggleMobileMenu }: ChatInterfaceProps) {
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const [analysisResult, setAnalysisResult] = useState<StressAnalysisResult | null>(null);
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
+  const [showBreathingExercise, setShowBreathingExercise] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Initialize with welcome message and load previous messages from localStorage
@@ -168,6 +170,65 @@ export function ChatInterface({ onToggleMobileMenu }: ChatInterfaceProps) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
+    }
+  };
+
+  // Handle audio file uploads for debugging purposes
+  const handleAudioFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    
+    const file = e.target.files[0];
+    
+    try {
+      // Add a processing message
+      const processingMessage: ChatMessage = {
+        id: nanoid(),
+        content: "Processing your uploaded audio... This will take a moment.",
+        isUserMessage: false,
+        timestamp: new Date(),
+      };
+      
+      setMessages((prev) => [...prev, processingMessage]);
+      
+      // Send the file for analysis
+      const result = await analyzeVoice(file);
+      setAnalysisResult(result);
+      setShowAnalysisModal(true);
+      
+      // Save analysis result to history
+      saveStressAnalysis(result);
+      
+      // Add a message with the analysis summary
+      const summaryMessage: ChatMessage = {
+        id: nanoid(),
+        content: `I've analyzed your uploaded audio. Your stress level is ${result.stressCategory.toLowerCase()} (${result.stressLevel}%). Would you like to see the detailed analysis or would you prefer some stress management recommendations?`,
+        isUserMessage: false,
+        timestamp: new Date(),
+      };
+      
+      // Replace the processing message with the summary
+      setMessages((prev) => 
+        prev.filter(msg => msg.id !== processingMessage.id).concat(summaryMessage)
+      );
+      
+      // Reset the file input
+      e.target.value = "";
+      
+    } catch (error) {
+      console.error("Error processing uploaded audio:", error);
+      
+      // Add error message to chat
+      const errorMessage: ChatMessage = {
+        id: nanoid(),
+        content: "I had trouble processing your audio file. Please try a different file or recording directly.",
+        isUserMessage: false,
+        timestamp: new Date(),
+      };
+      
+      setMessages((prev) => [...prev, errorMessage]);
+      
+      // Reset the file input
+      e.target.value = "";
     }
   };
 
@@ -328,21 +389,40 @@ export function ChatInterface({ onToggleMobileMenu }: ChatInterfaceProps) {
                 </p>
               </div>
 
-              {/* Voice Recording Button */}
-              <Button
-                variant={isRecording ? "destructive" : "default"}
-                size="sm"
-                className="min-w-[160px] transition-all duration-200"
-                onClick={isRecording ? handleStopRecording : handleStartRecording}
-              >
-                <span className="relative flex items-center justify-center w-5 h-5 mr-1.5">
-                  {isRecording && (
-                    <span className="absolute w-5 h-5 bg-red-500/30 rounded-full animate-ping"></span>
-                  )}
-                  <Mic className={`h-4 w-4 ${isRecording ? "text-white" : ""}`} />
-                </span>
-                <span className="text-sm">{isRecording ? "Stop Recording" : "Analyze My Stress"}</span>
-              </Button>
+              {/* Voice Recording and Upload Buttons */}
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button
+                  variant={isRecording ? "destructive" : "default"}
+                  size="sm"
+                  className="min-w-[160px] transition-all duration-200"
+                  onClick={isRecording ? handleStopRecording : handleStartRecording}
+                >
+                  <span className="relative flex items-center justify-center w-5 h-5 mr-1.5">
+                    {isRecording && (
+                      <span className="absolute w-5 h-5 bg-red-500/30 rounded-full animate-ping"></span>
+                    )}
+                    <Mic className={`h-4 w-4 ${isRecording ? "text-white" : ""}`} />
+                  </span>
+                  <span className="text-sm">{isRecording ? "Stop Recording" : "Analyze My Stress"}</span>
+                </Button>
+                
+                {/* Audio File Upload Button */}
+                <input
+                  type="file"
+                  id="audio-upload"
+                  accept="audio/*"
+                  className="hidden"
+                  onChange={handleAudioFileUpload}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs bg-white dark:bg-gray-800"
+                  onClick={() => document.getElementById('audio-upload')?.click()}
+                >
+                  <span className="text-sm">Upload Audio</span>
+                </Button>
+              </div>
             </div>
           </div>
           
@@ -379,6 +459,12 @@ export function ChatInterface({ onToggleMobileMenu }: ChatInterfaceProps) {
           onClose={() => setShowAnalysisModal(false)}
         />
       )}
+      
+      {/* Breathing Exercise Modal */}
+      <BreathingExercise
+        open={showBreathingExercise}
+        onOpenChange={setShowBreathingExercise}
+      />
     </>
   );
 }

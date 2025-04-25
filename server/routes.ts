@@ -11,6 +11,7 @@ import dotenv from "dotenv";
 import fs from "fs";
 import { Readable } from "stream";
 import path from "path";
+import { extractAudioFeatures } from "./audioAnalysis";
 
 // Load environment variables from .env file
 dotenv.config();
@@ -271,7 +272,7 @@ async function simulateGeminiResponse(message: string): Promise<string> {
   return "I'm here to help you manage stress and improve your well-being. You can ask me about stress management techniques, try a voice stress analysis, or discuss specific concerns you have about your mental well-being. How can I assist you today?";
 }
 
-// Real voice analysis with AssemblyAI using the official SDK
+// Advanced voice analysis using AssemblyAI for text and direct audio processing with Meyda/TensorFlow
 async function analyzeVoiceWithAssemblyAI(audioBuffer: Buffer): Promise<any> {
   const apiKey = process.env.ASSEMBLYAI_API_KEY;
   if (!apiKey) {
@@ -279,7 +280,7 @@ async function analyzeVoiceWithAssemblyAI(audioBuffer: Buffer): Promise<any> {
   }
 
   try {
-    console.log("Starting AssemblyAI voice analysis process...");
+    console.log("Starting advanced voice analysis process with acoustic feature extraction...");
     console.log(`Audio buffer size: ${audioBuffer.length} bytes`);
     
     // Create a temporary file to store the audio buffer
@@ -291,6 +292,10 @@ async function analyzeVoiceWithAssemblyAI(audioBuffer: Buffer): Promise<any> {
     const tempFilePath = path.join(tempDir, `recording-${Date.now()}.wav`);
     fs.writeFileSync(tempFilePath, audioBuffer);
     console.log(`Saved audio to temporary file: ${tempFilePath}`);
+    
+    // Direct audio feature extraction using Meyda
+    console.log("Extracting acoustic features from audio using Meyda...");
+    const audioFeatures = await extractAudioFeatures(tempFilePath);
     
     // Initialize the AssemblyAI client with the API key
     console.log("Initializing AssemblyAI client...");
@@ -387,39 +392,104 @@ async function analyzeVoiceWithAssemblyAI(audioBuffer: Buffer): Promise<any> {
     }
     console.log(`Speech pace score: ${speechPaceScore}/100`);
     
-    // For voice tone and tremor, we would need audio analysis not provided by AssemblyAI
-    // We'll estimate these based on other factors and add some controlled randomness
-    console.log("Estimating voice tone and tremor scores based on sentiment and other factors...");
+    // Improved analysis for voice tone and tremor using linguistic features from the transcript
+    console.log("Analyzing voice features from transcript for more accurate stress indicators...");
     
-    // Voice tone score (estimated)
-    // Negative sentiment often indicates tense voice tone
-    // We use an inverse relationship with sentiment score
-    const sentimentFactor = 100 - sentimentScore;
-    const paceContribution = speechPaceScore > 70 ? 20 : 0; // Fast speech often indicates tense tone
-    const randomVariation = Math.floor(Math.random() * 10) - 5; // Small random factor (-5 to +5)
+    // 1. Analyze speech patterns for fillers, repetitions and hesitations
+    // These are strong indicators of stress in speech patterns
+    const fillerWords = ['um', 'uh', 'like', 'you know', 'actually', 'literally', 'basically'];
+    const fillerWordMatches = fillerWords.reduce((count, word) => {
+      const regex = new RegExp(`\\b${word}\\b`, 'gi');
+      const matches = (text.match(regex) || []).length;
+      return count + matches;
+    }, 0);
     
-    const voiceToneScore = Math.min(100, Math.max(0, 
-      Math.round((sentimentFactor * 0.7) + paceContribution + randomVariation)
+    // Calculate filler density (fillers per 100 words)
+    const fillerDensity = (fillerWordMatches / wordCount) * 100;
+    console.log(`Filler word density: ${fillerDensity.toFixed(2)}%`);
+    
+    // 2. Analyze sentence structure - short, fragmented sentences often indicate stress
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    const avgWordsPerSentence = sentences.length > 0 ? 
+      wordCount / sentences.length : 
+      0;
+    console.log(`Average words per sentence: ${avgWordsPerSentence.toFixed(2)}`);
+    
+    // Sentence fragmentation score (inversely related to avg sentence length)
+    const fragmentationScore = Math.min(100, Math.max(0, 
+      100 - (avgWordsPerSentence * 4)
     ));
-    console.log(`Estimated voice tone score: ${voiceToneScore}/100 (higher = more tense)`);
+    console.log(`Sentence fragmentation score: ${fragmentationScore}/100`);
     
-    // Voice tremor (estimated)
-    // Higher sentiment negativity and faster speech correlate with tremor
-    const tremorBase = sentimentScore < 30 ? 70 : (sentimentScore < 60 ? 50 : 30);
+    // 3. Analyze interruptions and restarts in speech
+    // Look for dashes, ellipses, and sudden shifts that indicate interrupted thought
+    const interruptionIndicators = text.match(/(\-{2,}|\.{3,}|\s\-\s)/g) || [];
+    const interruptionScore = Math.min(100, interruptionIndicators.length * 15);
+    console.log(`Speech interruption score: ${interruptionScore}/100`);
+    
+    // 4. Analyze emotional words using a simple lexicon approach
+    const anxietyWords = ['worried', 'nervous', 'anxious', 'stressed', 'fear', 'afraid', 
+                         'panic', 'concern', 'tension', 'pressure', 'overwhelm'];
+    const confidenceWords = ['confident', 'calm', 'relaxed', 'peaceful', 'sure', 'certain', 
+                            'balanced', 'composed', 'steady'];
+    
+    // Count anxiety and confidence words
+    const anxietyWordCount = anxietyWords.reduce((count, word) => {
+      const regex = new RegExp(`\\b${word}\\w*\\b`, 'gi'); // Match word and variations
+      const matches = (text.match(regex) || []).length;
+      return count + matches;
+    }, 0);
+    
+    const confidenceWordCount = confidenceWords.reduce((count, word) => {
+      const regex = new RegExp(`\\b${word}\\w*\\b`, 'gi');
+      const matches = (text.match(regex) || []).length;
+      return count + matches;
+    }, 0);
+    
+    console.log(`Anxiety words: ${anxietyWordCount}, Confidence words: ${confidenceWordCount}`);
+    
+    // 5. Voice tone score based on linguistic features (no more random values)
+    const sentimentFactor = 100 - sentimentScore; // Inverse of sentiment (more negative = more stress)
+    const paceContribution = speechPaceScore > 70 ? 20 : 0; // Fast speech often indicates tense tone
+    const fillerContribution = Math.min(30, fillerDensity * 5); // Higher filler word use = more stress
+    const emotionRatio = confidenceWordCount > 0 ? 
+      anxietyWordCount / confidenceWordCount : 
+      anxietyWordCount > 0 ? 100 : 0;
+    const emotionContribution = Math.min(25, emotionRatio * 10);
+    
+    // Calculate voice tone score using actual linguistic indicators
+    const voiceToneScore = Math.min(100, Math.max(0, 
+      Math.round((sentimentFactor * 0.4) + 
+                 (paceContribution * 0.2) + 
+                 (fillerContribution * 0.2) + 
+                 (fragmentationScore * 0.1) + 
+                 (emotionContribution * 0.1))
+    ));
+    console.log(`Voice tone score based on linguistic analysis: ${voiceToneScore}/100 (higher = more tense)`);
+    
+    // 6. Voice tremor score based on speech patterns (no more random values)
+    // Speech interruptions, fragmentation and filler words can indicate vocal tremor
+    const baseScore = Math.max(
+      fragmentationScore,
+      Math.min(100, fillerDensity * 7),
+      interruptionScore
+    );
     const paceFactor = speechPaceScore > 70 ? 15 : 0;
-    const tremorRandomVariation = Math.floor(Math.random() * 10) - 5;
+    const sentimentInfluence = sentimentScore < 30 ? 20 : (sentimentScore < 60 ? 10 : 0);
     
+    // Calculate voice tremor score using speech pattern indicators
     const voiceTremorScore = Math.min(100, Math.max(0,
-      Math.round(tremorBase + paceFactor + tremorRandomVariation)
+      Math.round((baseScore * 0.6) + (paceFactor * 0.2) + (sentimentInfluence * 0.2))
     ));
     console.log(`Estimated voice tremor score: ${voiceTremorScore}/100 (higher = more tremor)`);
 
-    // Calculate overall stress level (1-100)
+    // Calculate overall stress level (1-100) with enhanced weighting from acoustic features
     const stressLevel = Math.min(100, Math.max(1, Math.floor(
-      (voiceToneScore * 0.3) + 
-      (speechPaceScore * 0.25) + 
-      (voiceTremorScore * 0.2) + 
-      ((100 - sentimentScore) * 0.25) // Invert sentiment score for stress contribution
+      (voiceToneScore * 0.25) + 
+      (speechPaceScore * 0.20) + 
+      (voiceTremorScore * 0.25) + 
+      ((100 - sentimentScore) * 0.20) + 
+      (audioFeatures.stressScore * 0.10) // Direct acoustic feature contribution
     )));
     console.log(`Calculated overall stress level: ${stressLevel}/100`);
 
